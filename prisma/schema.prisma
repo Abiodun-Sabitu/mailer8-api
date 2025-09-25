@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for user roles
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+// User model for authentication and authorization
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ADMIN)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relations
+  customersCreated   Customer[]      @relation("CustomerCreatedBy")
+  templatesCreated   EmailTemplate[] @relation("TemplateCreatedBy")
+  settingsUpdated    Setting[]       @relation("SettingUpdatedBy")
+
+  @@map("users")
+}
+
+// Customer model for storing customer information
+model Customer {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  email     String    @unique
+  dob       DateTime  @db.Date
+  createdBy String?   @db.Uuid
+  createdAt DateTime  @default(now())
+
+  // Relations
+  creator User? @relation("CustomerCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@map("customers")
+}
+
+// Email template model for managing email templates
+model EmailTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  subject   String
+  body      String   @db.Text
+  isActive  Boolean  @default(true)
+  createdBy String?  @db.Uuid
+  createdAt DateTime @default(now())
+
+  // Relations
+  creator User? @relation("TemplateCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@map("email_templates")
+}
+
+// Settings model for application configuration
+model Setting {
+  id        String    @id @default(uuid()) @db.Uuid
+  key       String    @unique
+  value     String
+  updatedBy String?   @db.Uuid
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  updater User? @relation("SettingUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@map("settings")
+}
