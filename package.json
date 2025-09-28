@@ -2,12 +2,14 @@
   "name": "mailer8-api",
   "version": "1.0.0",
   "description": "Mailer8 helps SMEs celebrate their customers with automated, personalized birthday emails",
-  "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node --esm src/server.ts",
+    "dev": "nodemon",
+    "dev:verbose": "nodemon --verbose",
+    "build": "tsc -p tsconfig.json",
+    "prestart": "npm run build",
     "start": "node dist/server.js",
-    "build": "tsc",
+    "clean": "rimraf dist || rm -rf dist",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -18,10 +20,10 @@
     "typescript",
     "mailer"
   ],
-  "author": "",
+  "author": "Abiodun Sabitu",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.19.1",
+    "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -49,6 +51,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.15",
     "nodemon": "^3.1.4",
+    "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   }

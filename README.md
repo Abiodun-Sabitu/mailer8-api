@@ -1,8 +1,126 @@
 # Mailer8 API
 
-Backend API for Mailer8 - helping SMEs celebrate their customers with automated, personalized birthday emails.
+A complete REST API for sending automated, personalized birthday emails built with Node.js, Express, TypeScript, Prisma, and PostgreSQL.
 
 ## Features
+
+- 🔐 **JWT Authentication** - Secure login/logout with role-based access (SUPER_ADMIN/ADMIN)
+- 👥 **User Management** - Admin user creation and status management
+- 📧 **Customer Management** - CRUD operations with search, pagination, and birthday tracking
+- 📝 **Email Templates** - Customizable HTML templates with placeholder support
+- ⚙️ **Settings Management** - Configure default templates and email scheduling
+- 🎂 **Birthday Email Jobs** - Automated birthday email sending with idempotent daily runs
+- 📊 **Email Analytics** - Track sent emails, success rates, and comprehensive logging
+- 🕐 **Flexible Scheduling** - Development auto-scheduler + production external scheduler support
+
+## Quick Start
+
+### Prerequisites
+- Node.js 14+ (Node.js 22 recommended)
+- PostgreSQL database
+- SMTP email service
+
+### Installation & Setup
+
+```bash
+# Clone and install
+git clone <repository-url>
+cd mailer8-api
+npm install
+
+# Setup environment
+cp .env.example .env
+# Edit .env with your database and SMTP settings
+
+# Database setup
+npx prisma generate
+npm run prisma:migrate
+npx ts-node src/db/seed.ts
+
+# Start development server
+npm run dev
+```
+
+**Default Admin Credentials:** admin@mail.local / Admin@123
+
+## API Overview
+
+All endpoints return JSON with consistent structure:
+```json
+{
+  "success": true,
+  "message": "Operation completed",
+  "data": { ... }
+}
+```
+
+### Core Endpoints
+
+**Authentication**
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - Create admin (SUPER_ADMIN only)  
+- `GET /api/auth/me` - Get current user profile
+
+**Birthday Email Job**
+- `POST /api/jobs/send-birthday-emails` - Send birthday emails now
+- `GET /api/jobs/email-logs` - View email history
+- `GET /api/jobs/birthday-email-stats` - Analytics
+
+**Management** (Authentication required)
+- `/api/customers` - Customer CRUD with search/pagination
+- `/api/templates` - Email template management
+- `/api/settings` - System configuration (SUPER_ADMIN only)
+
+## Template System
+
+Templates support dynamic placeholders:
+- `{{firstName}}` - Customer first name
+- `{{lastName}}` - Customer last name  
+- `{{email}}` - Customer email
+- `{{dob}}` - Formatted birthday date (e.g., "15 May")
+
+Example template:
+```html
+<h1>🎉 Happy Birthday {{firstName}}!</h1>
+<p>Dear {{firstName}} {{lastName}},</p>
+<p>Hope your special day on {{dob}} is amazing!</p>
+```
+
+## Production Deployment
+
+1. Set `NODE_ENV=production` (disables internal scheduler)
+2. Use external scheduler to call `POST /api/jobs/send-birthday-emails`
+3. Configure proper SMTP and database credentials
+4. Run migrations: `npm run prisma:migrate`
+
+## Environment Variables
+
+**Required:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - JWT signing secret  
+- `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` - Email service credentials
+
+**Optional:**
+- `DEFAULT_CRON_TIME=07:00` - Daily email send time
+- `TZ=Africa/Lagos` - Timezone for birthday calculation
+- `PORT=3000` - Server port
+
+## Scripts
+
+- `npm run dev` - Development server with auto-restart
+- `npm run build` - Build TypeScript for production
+- `npm start` - Start production server  
+- `npm run prisma:migrate` - Run database migrations
+
+## Architecture
+
+Built with feature-based modular architecture:
+- `src/features/` - Auth, Users, Customers, Templates, Settings, Jobs
+- `src/middleware/` - Authentication, validation, error handling
+- `src/utils/` - Crypto, dates, templating, pagination helpers
+- `src/config/` - Environment, logging, email configuration
+
+Perfect for SMEs wanting to automate customer birthday celebrations! 🎂
 
 - **Node.js + Express + TypeScript**: Modern backend stack
 - **ES Modules**: Using the latest module system

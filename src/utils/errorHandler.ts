@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import createError from 'http-errors';
-import { logger } from './logger.js';
+import { logger } from './logger';
 
 export const globalErrorHandler = (
   err: any,
@@ -24,7 +24,6 @@ export const globalErrorHandler = (
     error: {
       message: err.message,
       status: statusCode,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     }
   });
 };

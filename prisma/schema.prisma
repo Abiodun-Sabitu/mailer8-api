@@ -1,4 +1,4 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -10,71 +10,90 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enum for user roles
+// enums
 enum Role {
   SUPER_ADMIN
   ADMIN
 }
 
-// User model for authentication and authorization
+// core users
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(ADMIN)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  firstName  String
+  lastName   String
+  role       Role     @default(ADMIN)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  // Relations
-  customersCreated   Customer[]      @relation("CustomerCreatedBy")
-  templatesCreated   EmailTemplate[] @relation("TemplateCreatedBy")
-  settingsUpdated    Setting[]       @relation("SettingUpdatedBy")
+  createdCustomers Customer[] @relation("CustomerCreatedBy")
+  createdTemplates EmailTemplate[] @relation("TemplateCreatedBy")
 
   @@map("users")
 }
 
-// Customer model for storing customer information
+// customers
 model Customer {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String
-  email     String    @unique
-  dob       DateTime  @db.Date
-  createdBy String?   @db.Uuid
-  createdAt DateTime  @default(now())
+  id         String   @id @default(uuid())
+  firstName  String
+  lastName   String
+  email      String   @unique
+  dob        DateTime // store with year, compare MM-DD for birthdays
+  isActive   Boolean  @default(true)
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  // Relations
-  creator User? @relation("CustomerCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  creator User @relation("CustomerCreatedBy", fields: [createdBy], references: [id])
+  emailLogs EmailLog[]
 
   @@map("customers")
 }
 
-// Email template model for managing email templates
+// email templates
 model EmailTemplate {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  subject   String
-  body      String   @db.Text
-  isActive  Boolean  @default(true)
-  createdBy String?  @db.Uuid
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  name       String   @unique
+  subject    String
+  body       String   // supports placeholders: {{firstName}}, {{lastName}}, {{email}}, {{dob}}
+  isActive   Boolean  @default(true)
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  // Relations
-  creator User? @relation("TemplateCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  creator User @relation("TemplateCreatedBy", fields: [createdBy], references: [id])
+  emailLogs EmailLog[]
 
   @@map("email_templates")
 }
 
-// Settings model for application configuration
+// key-value settings (global)
 model Setting {
-  id        String    @id @default(uuid()) @db.Uuid
-  key       String    @unique
+  id        String   @id @default(uuid())
+  key       String   @unique
   value     String
-  updatedBy String?   @db.Uuid
-  updatedAt DateTime  @updatedAt
-
-  // Relations
-  updater User? @relation("SettingUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 
   @@map("settings")
+}
+
+// email send history
+model EmailLog {
+  id            String        @id @default(uuid())
+  customerId    String
+  templateId    String?
+  toEmail       String
+  subject       String
+  renderedBody  String
+  status        String        // "SENT" | "FAILED"
+  errorMessage  String?
+  sentAt        DateTime      @default(now())
+
+  customer  Customer   @relation(fields: [customerId], references: [id])
+  template  EmailTemplate? @relation(fields: [templateId], references: [id])
+
+  @@map("email_logs")
 }
