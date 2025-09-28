@@ -1,17 +1,19 @@
 import { Router } from 'express';
 import { sendBirthdayEmailsCron, sendBirthdayEmails, getEmailLogs, getBirthdayEmailStats } from './jobs.controller';
 import { authenticate } from '../../middleware/auth';
+import { requireSuperAdmin } from '../../middleware/requireRole';
 
 const router = Router();
 
 // Public endpoint for external cron jobs (production)
-router.post('/cron/send-birthday-emails', sendBirthdayEmailsCron);
+// POST /api/jobs/cron/birthday-emails?date=YYYY-MM-DD&force=true
+router.post('/cron/birthday-emails', sendBirthdayEmailsCron);
 
 // All other routes require authentication
-router.use(authenticate);
+router.use(authenticate, requireSuperAdmin);
 
 // Send birthday emails (authenticated)
-router.post('/send-birthday-emails', sendBirthdayEmails);
+router.post('/birthday-emails', sendBirthdayEmails);
 
 // Get email logs
 router.get('/email-logs', getEmailLogs);

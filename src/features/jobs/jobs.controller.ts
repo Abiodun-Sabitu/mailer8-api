@@ -16,7 +16,26 @@ export const sendBirthdayEmailsCron = asyncHandler(async (req: Request, res: Res
     });
   }
 
-  const { date } = req.query;
+  // Import getCronTime here to avoid circular imports
+  const { getCronTime } = await import('../settings/settings.service');
+  
+  // Check if current time is within acceptable window of DB scheduled time
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const dbScheduledTime = await getCronTime();
+  const [scheduledHour, scheduledMinute] = dbScheduledTime.split(':').map(Number);
+  
+  // Calculate time difference in minutes
+  const currentTotalMinutes = currentHour * 60 + currentMinute;
+  const scheduledTotalMinutes = scheduledHour * 60 + scheduledMinute;
+  const timeDifferenceMinutes = Math.abs(currentTotalMinutes - scheduledTotalMinutes);
+  
+  // Allow 5-minute tolerance window for latency/processing delays
+  const TOLERANCE_MINUTES = 5;
+  const isWithinTimeWindow = timeDifferenceMinutes <= TOLERANCE_MINUTES;
+  
+  const { date, force } = req.query;
   const targetDate = date ? new Date(date as string) : undefined;
 
   if (date && isNaN(targetDate!.getTime())) {
@@ -26,10 +45,28 @@ export const sendBirthdayEmailsCron = asyncHandler(async (req: Request, res: Res
     });
   }
 
-  logger.info('Birthday email cron job started', {
+  logger.info('External cron job triggered', {
     triggeredBy: 'external-cron',
-    targetDate: targetDate?.toISOString() || 'today'
+    currentTime: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
+    dbScheduledTime,
+    timeDifferenceMinutes,
+    isWithinTimeWindow,
+    targetDate: targetDate?.toISOString() || 'today',
+    force: !!force
   });
+
+  // Skip if not within time window (unless force=true for testing)
+  if (!force && !isWithinTimeWindow) {
+    const message = `Skipped - Current time is ${timeDifferenceMinutes} minutes away from scheduled time ${dbScheduledTime} (tolerance: ${TOLERANCE_MINUTES} minutes)`;
+    logger.info(message);
+    return ok(res, { 
+      skipped: true, 
+      currentTime: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
+      scheduledTime: dbScheduledTime,
+      timeDifferenceMinutes,
+      toleranceMinutes: TOLERANCE_MINUTES
+    }, message);
+  }
 
   const summary = await sendBirthdayEmailsService(targetDate);
 

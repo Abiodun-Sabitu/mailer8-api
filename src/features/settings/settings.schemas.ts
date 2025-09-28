@@ -8,7 +8,10 @@ export const UpdateDefaultTemplateSchema = z.object({
 
 export const UpdateCronTimeSchema = z.object({
   body: z.object({
-    cronTime: z.string({ required_error: 'Please enter the email send time' }).regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Please enter time in HH:mm format (e.g., 09:30)')
+    cronTime: z.enum(['00:00', '07:00', '09:00'], { 
+      required_error: 'Please select a send time',
+      invalid_type_error: 'Please select a valid send time (12:00 AM, 7:00 AM, or 9:00 AM)'
+    })
   })
 });
 
