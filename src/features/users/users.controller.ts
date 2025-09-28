@@ -44,6 +44,5 @@ export const updateUserStatus = asyncHandler(async (req: Request, res: Response)
     isActive: user.isActive,
     updatedBy: req.user?.id
   });
-
-  ok(res, user, `User ${data.isActive ? 'activated' : 'deactivated'} successfully`);
+  ok(res, user, `User ${data.isActive ? 're-activated' : 'deactivated'} successfully`);
 });
