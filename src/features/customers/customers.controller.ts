@@ -75,5 +75,5 @@ export const deleteCustomer = asyncHandler(async (req: Request, res: Response) =
     deletedBy: req.user?.id
   });
 
-  noContent(res, 'Customer deleted successfully');
+  ok(res, {}, 'Customer deleted successfully');
 });
