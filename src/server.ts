@@ -4,7 +4,7 @@ config(); // Load environment variables first
 import app from './app';
 import { connectDatabase, disconnectDatabase } from './db/prisma';
 import { logger } from './config/logger';
-import { startDevelopmentCronJobs } from './services/cronService';
+import { startCronJobs } from './services/cronService';
 
 const PORT = parseInt(process.env.PORT || '8000', 10);
 
@@ -23,10 +23,10 @@ const startServer = async () => {
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 
-    // Setup development cron jobs (only in development)
-    if (process.env.NODE_ENV !== 'production' && dbConnected) {
-      await startDevelopmentCronJobs();
-      logger.info('📝 In production, use external scheduler to call POST /api/jobs/cron/birthday-emails');
+    // Setup dual cron jobs
+    if (dbConnected) {
+      await startCronJobs();
+      logger.info('📝 Dual cron system started - fixed cron (ENV) + flexible cron (database)');
     }
 
     // Graceful shutdown (DB + server close)

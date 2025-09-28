@@ -7,11 +7,13 @@ import {
   UpdateTemplateSchema,
   GetTemplatesQuerySchema
 } from './templates.schemas';
+import { requireSuperAdmin } from '../../middleware/requireRole';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+router.use(requireSuperAdmin);
 
 // Create template
 router.post(

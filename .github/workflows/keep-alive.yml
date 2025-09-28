@@ -1,0 +1,19 @@
+name: Keep Render Service Alive
+
+on:
+  schedule:
+    # Runs every 5 minutes to prevent Render free tier from sleeping
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Service
+        env:
+          HEALTH_CHECK_URL: ${{ vars.HEALTH_CHECK_URL || 'https://mailer8-api.onrender.com/api/health' }}
+        run: |
+          echo "Pinging service to keep it alive..."
+          curl -f "$HEALTH_CHECK_URL" || echo "Service might be starting up..."
+          echo "Keep-alive ping completed at $(date)"

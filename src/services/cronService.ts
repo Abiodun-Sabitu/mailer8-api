@@ -3,81 +3,128 @@ import { sendBirthdayEmails } from '../features/jobs/jobs.service';
 import { logger } from '../config/logger';
 
 /**
- * Starts internal cron jobs for development environment
- * Uses SEND_TIME environment variable (e.g., "07:00")
- * In production, external cron services should call {{base-url}}/api/jobs/cron/birthday-emails
+ * Starts dual cron jobs in both dev and prod:
+ * 1. Fixed time from ENV (default 07:00) - reliable daily emails
+ * 2. User-configurable time from DB - flexible testing/experience
  */
-export const startDevelopmentCronJobs = async () => {
-  try {
-    const envCronTime = process.env.SEND_TIME || '07:00';
-    
-    // Validate time format
-    const timePattern = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timePattern.test(envCronTime)) {
-      throw new Error(`Invalid SEND_TIME format: ${envCronTime}. Use HH:MM format (00:00 - 23:59)`);
-    }
-    
-    logger.info('🕐 Setting up development cron job...', { scheduledTime: envCronTime });
-
-    const [hours, minutes] = envCronTime.split(':');
-    const cronExpression = `0 ${minutes} ${hours} * * *`;
-
-    cron.schedule(cronExpression, async () => {
-      await runDevelopmentBirthdayJob(envCronTime);
-    }, {
-      timezone: process.env.TZ || 'Africa/Lagos'
-    });
-
-    logger.info(`✅ Development cron job scheduled for ${envCronTime} (${process.env.TZ || 'Africa/Lagos'})`);
-    logger.info('💡 To test: Update SEND_TIME in your .env file and restart server');
-  } catch (error) {
-    logger.error('❌ Failed to setup development cron job', { error });
-  }
+export const startCronJobs = async () => {
+  await startDualCronJobs();
 };
 
 /**
- * Runs birthday email job for development
+ * Dual cron system - works in both dev and prod
  */
-const runDevelopmentBirthdayJob = async (scheduledTime: string) => {
+export const startDualCronJobs = async () => {
   try {
-    logger.info(`🎂 Running development birthday email job at ${scheduledTime}`);
+    const { getCronTime, getTimezone } = await import('../features/settings/settings.service');
+    
+    // Get initial settings from database
+    const dbCronTime = await getCronTime();
+    const dbTimezone = await getTimezone();
+    
+    // Get fixed time from ENV (default 07:00)
+    const fixedTime = process.env.FIXED_CRON_TIME || '07:00';
+    // Get fixed timezone from ENV (fallback to system default)
+    const fixedTimezone = process.env.TZ || 'UTC';
+    
+    logger.info('🕐 Setting up dual cron jobs...', { 
+      fixedCronTime: fixedTime,
+      fixedTimezone: fixedTimezone,
+      flexibleCronTime: dbCronTime, 
+      flexibleTimezone: dbTimezone,
+      environment: process.env.NODE_ENV || 'development'
+    });
+
+    // Cron Job 1: Fixed cron from ENV (reliable daily emails)
+    const [fixedHours, fixedMinutes] = fixedTime.split(':');
+    cron.schedule(`0 ${fixedMinutes} ${fixedHours} * * *`, async () => {
+      await runFixedCronJob(fixedTime, fixedTimezone);
+    }, {
+      timezone: fixedTimezone
+    });
+
+    // Cron Job 2: Flexible cron (user-configurable from database)
+    if (dbCronTime !== fixedTime) {  // Only if different from fixed time
+      const [hours, minutes] = dbCronTime.split(':');
+      const flexibleCronExpression = `0 ${minutes} ${hours} * * *`;
+
+      cron.schedule(flexibleCronExpression, async () => {
+        await runFlexibleCronJob(dbCronTime, dbTimezone);
+      }, {
+        timezone: dbTimezone
+      });
+
+      logger.info(`✅ Flexible cron scheduled for ${dbCronTime} (${dbTimezone})`);
+    } else {
+      logger.info(`⏭️ Flexible cron skipped - same time as fixed cron (${fixedTime})`);
+    }
+
+    logger.info(`✅ Fixed cron scheduled for ${fixedTime} (${fixedTimezone})`);
+    logger.info('💡 Update settings to change flexible cron time - requires restart');
+  } catch (error) {
+    logger.error('❌ Failed to setup dual cron jobs', { error });
+  }
+};
+
+
+
+/**
+ * Runs fixed cron job (from ENV variable)
+ */
+const runFixedCronJob = async (scheduledTime: string, timezone: string) => {
+  try {
+    logger.info(`🎂 Running FIXED cron job at ${scheduledTime} (${timezone})`);
     const summary = await sendBirthdayEmails();
     
-    logger.info('✅ Development birthday email job completed', {
+    logger.info('✅ Fixed cron job completed', {
       ...summary,
-      scheduledTime
+      jobType: 'fixed-cron',
+      scheduledTime,
+      timezone
     });
   } catch (error) {
     const errorDetails = {
+      jobType: 'fixed-cron',
       scheduledTime,
+      timezone,
       errorType: error instanceof Error ? error.constructor.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
       errorStack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString()
     };
-
-    logger.error('❌ Development birthday email job failed', errorDetails);
     
-    // Also log to console for immediate visibility during development
-    console.error('🚨 CRON JOB ERROR DETAILS:');
-    console.error('Message:', errorDetails.errorMessage);
-    console.error('Type:', errorDetails.errorType);
-    if (errorDetails.errorStack) {
-      console.error('Stack:', errorDetails.errorStack);
-    }
+    logger.error('❌ Fixed cron job failed', errorDetails);
   }
 };
 
 /**
- * Test function to manually trigger birthday emails (for development testing)
+ * Runs flexible cron job (user-configurable time from database)
  */
-export const testBirthdayEmails = async (): Promise<void> => {
+const runFlexibleCronJob = async (scheduledTime: string, timezone: string) => {
   try {
-    logger.info('🧪 Running test birthday email job');
+    logger.info(`🧪 Running FLEXIBLE cron job at ${scheduledTime} (${timezone})`);
     const summary = await sendBirthdayEmails();
-    logger.info('✅ Test birthday email job completed', summary);
+    
+    logger.info('✅ Flexible cron job completed', {
+      ...summary,
+      jobType: 'flexible-cron',
+      scheduledTime,
+      timezone
+    });
   } catch (error) {
-    logger.error('❌ Test birthday email job failed', { error });
-    throw error;
+    const errorDetails = {
+      jobType: 'flexible-cron',
+      scheduledTime,
+      timezone,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    };
+    
+    logger.error('❌ Flexible cron job failed', errorDetails);
   }
 };
+
+
+

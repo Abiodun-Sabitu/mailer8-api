@@ -69,5 +69,5 @@ export const deleteTemplate = asyncHandler(async (req: Request, res: Response) =
     deletedBy: req.user?.id
   });
 
-  noContent(res, 'Template deleted successfully');
+  ok(res, {}, 'Template deleted successfully');
 });
