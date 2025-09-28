@@ -41,10 +41,23 @@ const runDevelopmentBirthdayJob = async (scheduledTime: string) => {
       scheduledTime
     });
   } catch (error) {
-    logger.error('❌ Development birthday email job failed', { 
-      error: error instanceof Error ? error.message : error,
-      scheduledTime 
-    });
+    const errorDetails = {
+      scheduledTime,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    };
+
+    logger.error('❌ Development birthday email job failed', errorDetails);
+    
+    // Also log to console for immediate visibility during development
+    console.error('🚨 CRON JOB ERROR DETAILS:');
+    console.error('Message:', errorDetails.errorMessage);
+    console.error('Type:', errorDetails.errorType);
+    if (errorDetails.errorStack) {
+      console.error('Stack:', errorDetails.errorStack);
+    }
   }
 };
 

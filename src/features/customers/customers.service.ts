@@ -118,10 +118,10 @@ export const getBirthdayCustomers = async (date?: Date): Promise<Customer[]> => 
 
   const customers = await prisma.$queryRaw<Customer[]>`
     SELECT * FROM customers 
-    WHERE isActive = true 
+    WHERE "isActive" = true 
     AND EXTRACT(MONTH FROM dob) = ${month}
     AND EXTRACT(DAY FROM dob) = ${day}
-    ORDER BY firstName, lastName
+    ORDER BY "firstName", "lastName"
   `;
 
   return customers;

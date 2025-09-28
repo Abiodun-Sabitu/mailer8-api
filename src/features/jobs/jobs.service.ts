@@ -27,23 +27,40 @@ export const sendBirthdayEmails = async (targetDate?: Date): Promise<BirthdayEma
   };
 
   try {
+    logger.info('🔍 Starting birthday email job diagnostics...');
+    
     // Get default template
+    logger.info('📧 Fetching default email template...');
     const defaultTemplate = await getDefaultTemplate();
     
     if (!defaultTemplate) {
+      logger.error('❌ No default template found in database');
       throw new Error('No default template configured. Please set a default template in settings.');
     }
+    
+    logger.info('✅ Default template found', { 
+      templateId: defaultTemplate.id, 
+      templateName: defaultTemplate.name 
+    });
 
     // Get customers with birthdays today
+    logger.info('🎂 Fetching customers with birthdays...', {
+      targetDate: targetDate?.toISOString() || 'today'
+    });
     const birthdayCustomers = await getBirthdayCustomers(targetDate);
       
+      logger.info('✅ Customer query completed', { 
+        customerCount: birthdayCustomers.length,
+        targetDate: targetDate?.toISOString() || 'today'
+      });
+      
       if (birthdayCustomers.length === 0) {
-        logger.info('No customers with birthdays today');
+        logger.info('ℹ️  No customers with birthdays found for target date');
         return summary;
       }
 
       summary.attempted = birthdayCustomers.length;
-      logger.info(`Found ${birthdayCustomers.length} customers with birthdays today`);
+      logger.info(`🚀 Starting email processing for ${birthdayCustomers.length} customers`);
 
       // Process each customer
       for (const customer of birthdayCustomers) {
@@ -155,21 +172,28 @@ export const sendBirthdayEmails = async (targetDate?: Date): Promise<BirthdayEma
   }
 };
 
-export const getEmailLogs = async (customerId?: string, limit: number = 50): Promise<EmailLog[]> => {
+export const getEmailLogs = async (customerId?: string, limit: number = 50) => {
   const where = customerId ? { customerId } : {};
 
   const logs = await prisma.emailLog.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      toEmail: true,
+      subject: true,
+      status: true,
+      sentAt: true,
+      errorMessage: true,
       customer: {
         select: {
+          id: true,
           firstName: true,
-          lastName: true,
-          email: true
+          lastName: true
         }
       },
       template: {
         select: {
+          id: true,
           name: true
         }
       }

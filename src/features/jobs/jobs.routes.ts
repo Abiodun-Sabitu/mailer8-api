@@ -10,7 +10,7 @@ const router = Router();
 router.post('/cron/birthday-emails', sendBirthdayEmailsCron);
 
 // All other routes require authentication
-router.use(authenticate, requireSuperAdmin);
+router.use(authenticate);
 
 // Send birthday emails (authenticated)
 router.post('/birthday-emails', sendBirthdayEmails);
