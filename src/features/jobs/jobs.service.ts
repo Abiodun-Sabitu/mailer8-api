@@ -1,7 +1,7 @@
 import { Customer, EmailLog } from '@prisma/client';
 import { prisma } from '../../db/prisma';
-import { CustomersService } from '../customers/customers.service';
-import { SettingsService } from '../settings/settings.service';
+import { getBirthdayCustomers } from '../customers/customers.service';
+import { getDefaultTemplate } from '../settings/settings.service';
 import { sendMail } from '../../config/mailer';
 import { renderTemplate, createEmailContext } from '../../utils/templating';
 import { isBirthdayToday } from '../../utils/dates';
@@ -18,25 +18,24 @@ export interface BirthdayEmailSummary {
   }>;
 }
 
-export class JobsService {
-  static async sendBirthdayEmails(targetDate?: Date): Promise<BirthdayEmailSummary> {
-    const summary: BirthdayEmailSummary = {
-      attempted: 0,
-      sent: 0,
-      failed: 0,
-      errors: []
-    };
+export const sendBirthdayEmails = async (targetDate?: Date): Promise<BirthdayEmailSummary> => {
+  const summary: BirthdayEmailSummary = {
+    attempted: 0,
+    sent: 0,
+    failed: 0,
+    errors: []
+  };
 
-    try {
-      // Get default template
-      const defaultTemplate = await SettingsService.getDefaultTemplate();
-      
-      if (!defaultTemplate) {
-        throw new Error('No default template configured. Please set a default template in settings.');
-      }
+  try {
+    // Get default template
+    const defaultTemplate = await getDefaultTemplate();
+    
+    if (!defaultTemplate) {
+      throw new Error('No default template configured. Please set a default template in settings.');
+    }
 
-      // Get customers with birthdays today
-      const birthdayCustomers = await CustomersService.getBirthdayCustomers(targetDate);
+    // Get customers with birthdays today
+    const birthdayCustomers = await getBirthdayCustomers(targetDate);
       
       if (birthdayCustomers.length === 0) {
         logger.info('No customers with birthdays today');
@@ -149,67 +148,66 @@ export class JobsService {
       logger.info('Birthday email job completed', summary);
       return summary;
 
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Birthday email job failed', { error: errorMessage });
-      throw new Error(`Birthday email job failed: ${errorMessage}`);
-    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Birthday email job failed', { error: errorMessage });
+    throw new Error(`Birthday email job failed: ${errorMessage}`);
   }
+};
 
-  static async getEmailLogs(customerId?: string, limit: number = 50): Promise<EmailLog[]> {
-    const where = customerId ? { customerId } : {};
+export const getEmailLogs = async (customerId?: string, limit: number = 50): Promise<EmailLog[]> => {
+  const where = customerId ? { customerId } : {};
 
-    const logs = await prisma.emailLog.findMany({
-      where,
-      include: {
-        customer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        template: {
-          select: {
-            name: true
-          }
+  const logs = await prisma.emailLog.findMany({
+    where,
+    include: {
+      customer: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true
         }
       },
-      orderBy: { sentAt: 'desc' },
-      take: limit
-    });
-
-    return logs;
-  }
-
-  // Get birthday email statistics
-  static async getBirthdayEmailStats(days: number = 30): Promise<{
-    totalEmails: number;
-    sentEmails: number;
-    failedEmails: number;
-    successRate: number;
-  }> {
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-
-    const logs = await prisma.emailLog.findMany({
-      where: {
-        sentAt: {
-          gte: since
+      template: {
+        select: {
+          name: true
         }
       }
-    });
+    },
+    orderBy: { sentAt: 'desc' },
+    take: limit
+  });
 
-    const totalEmails = logs.length;
-    const sentEmails = logs.filter(log => log.status === 'SENT').length;
-    const failedEmails = logs.filter(log => log.status === 'FAILED').length;
-    const successRate = totalEmails > 0 ? (sentEmails / totalEmails) * 100 : 0;
+  return logs;
+};
 
-    return {
-      totalEmails,
-      sentEmails,
-      failedEmails,
-      successRate: Math.round(successRate * 100) / 100
-    };
-  }
-}
+// Get birthday email statistics
+export const getBirthdayEmailStats = async (days: number = 30): Promise<{
+  totalEmails: number;
+  sentEmails: number;
+  failedEmails: number;
+  successRate: number;
+}> => {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const logs = await prisma.emailLog.findMany({
+    where: {
+      sentAt: {
+        gte: since
+      }
+    }
+  });
+
+  const totalEmails = logs.length;
+  const sentEmails = logs.filter(log => log.status === 'SENT').length;
+  const failedEmails = logs.filter(log => log.status === 'FAILED').length;
+  const successRate = totalEmails > 0 ? (sentEmails / totalEmails) * 100 : 0;
+
+  return {
+    totalEmails,
+    sentEmails,
+    failedEmails,
+    successRate: Math.round(successRate * 100) / 100
+  };
+};

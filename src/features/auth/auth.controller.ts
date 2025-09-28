@@ -1,6 +1,6 @@
 /// <reference path="../../types/express.d.ts" />
 import { Request, Response } from 'express';
-import { AuthService } from './auth.service';
+import { registerAdmin as registerAdminService, login as loginService, refreshToken as refreshTokenService, getCurrentUser as getCurrentUserService } from './auth.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { created, ok, unauthorized } from '../../utils/responses';
 import { logger } from '../../config/logger';
@@ -10,7 +10,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const data: RegisterAdminDto = req.body;
   const createdBy = req.user?.id!; // Ensured by requireSuperAdmin middleware
 
-  const user = await AuthService.registerAdmin(data, createdBy);
+  const user = await registerAdminService(data, createdBy);
 
   logger.info(`New admin registered: ${user.email}`, {
     userId: user.id,
@@ -25,7 +25,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const data: LoginDto = req.body;
 
-  const result = await AuthService.login(data);
+  const result = await loginService(data);
 
   logger.info(`User logged in: ${result.user.email}`, {
     userId: result.user.id
@@ -64,7 +64,7 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
   }
 
   try {
-    const result = await AuthService.refreshToken(refreshToken);
+    const result = await refreshTokenService(refreshToken);
 
     // Set new refresh token as httpOnly cookie
     res.cookie('mailer8_refresh_token', result.tokens.refreshToken, {
@@ -86,11 +86,10 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const me = asyncHandler(async (req: Request, res: Response) => {
-   //console.log("tesst");
-   // console.log(req);
+  
   const userId = req.user?.id!;
 
-  const user = await AuthService.getCurrentUser(userId);
+  const user = await getCurrentUserService(userId);
 
   if (!user) {
     return unauthorized(res, 'User not found');

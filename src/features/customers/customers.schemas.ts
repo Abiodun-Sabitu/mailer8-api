@@ -14,7 +14,8 @@ export const CreateCustomerSchema = z.object({
         return date;
       }
       return val;
-    })
+    }),
+    isActive: z.boolean({ required_error: 'Please specify if the customer should be active' }).optional()
   })
 });
 

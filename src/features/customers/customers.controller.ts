@@ -1,5 +1,11 @@
 import { Request, Response } from 'express';
-import { CustomersService } from './customers.service';
+import { 
+  createCustomer as createCustomerService,
+  getCustomers as getCustomersService,
+  getCustomerById as getCustomerByIdService,
+  updateCustomer as updateCustomerService,
+  deleteCustomer as deleteCustomerService
+} from './customers.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { created, ok, notFound, noContent } from '../../utils/responses';
 import { logger } from '../../config/logger';
@@ -9,7 +15,7 @@ export const createCustomer = asyncHandler(async (req: Request, res: Response) =
   const data: CreateCustomerDto = req.body;
   const createdBy = req.user?.id!;
 
-  const customer = await CustomersService.createCustomer(data, createdBy);
+  const customer = await createCustomerService(data, createdBy);
 
   logger.info(`Customer created: ${customer.email}`, {
     customerId: customer.id,
@@ -22,7 +28,7 @@ export const createCustomer = asyncHandler(async (req: Request, res: Response) =
 export const getCustomers = asyncHandler(async (req: Request, res: Response) => {
   const query: GetCustomersQueryDto = req.query as any;
 
-  const result = await CustomersService.getCustomers(query);
+  const result = await getCustomersService(query);
 
   ok(res, result, 'Customers retrieved successfully');
 });
@@ -30,7 +36,7 @@ export const getCustomers = asyncHandler(async (req: Request, res: Response) => 
 export const getCustomerById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const customer = await CustomersService.getCustomerById(id);
+  const customer = await getCustomerByIdService(id);
 
   if (!customer) {
     return notFound(res, 'Customer not found');
@@ -43,7 +49,7 @@ export const updateCustomer = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   const data: UpdateCustomerDto = req.body;
 
-  const customer = await CustomersService.updateCustomer(id, data);
+  const customer = await updateCustomerService(id, data);
 
   logger.info(`Customer updated: ${customer.email}`, {
     customerId: customer.id,
@@ -57,12 +63,12 @@ export const deleteCustomer = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
 
   // Check if customer exists first
-  const existingCustomer = await CustomersService.getCustomerById(id);
+  const existingCustomer = await getCustomerByIdService(id);
   if (!existingCustomer) {
     return notFound(res, 'Customer not found');
   }
 
-  await CustomersService.deleteCustomer(id);
+  await deleteCustomerService(id);
 
   logger.info(`Customer deleted: ${existingCustomer.email}`, {
     customerId: id,

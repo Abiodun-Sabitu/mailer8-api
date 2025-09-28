@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { JobsService } from './jobs.service';
+import { sendBirthdayEmails as sendBirthdayEmailsService, getEmailLogs as getEmailLogsService, getBirthdayEmailStats as getBirthdayEmailStatsService } from './jobs.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok } from '../../utils/responses';
 import { logger } from '../../config/logger';
@@ -31,7 +31,7 @@ export const sendBirthdayEmailsCron = asyncHandler(async (req: Request, res: Res
     targetDate: targetDate?.toISOString() || 'today'
   });
 
-  const summary = await JobsService.sendBirthdayEmails(targetDate);
+  const summary = await sendBirthdayEmailsService(targetDate);
 
   const message = `Birthday emails processed: ${summary.attempted} attempted, ${summary.sent} sent, ${summary.failed} failed`;
 
@@ -61,7 +61,7 @@ export const sendBirthdayEmails = asyncHandler(async (req: Request, res: Respons
     targetDate: targetDate?.toISOString() || 'today'
   });
 
-  const summary = await JobsService.sendBirthdayEmails(targetDate);
+  const summary = await sendBirthdayEmailsService(targetDate);
 
   const message = `Birthday emails processed: ${summary.attempted} attempted, ${summary.sent} sent, ${summary.failed} failed`;
 
@@ -86,7 +86,7 @@ export const getEmailLogs = asyncHandler(async (req: Request, res: Response) => 
     });
   }
 
-  const logs = await JobsService.getEmailLogs(customerId as string, parsedLimit);
+  const logs = await getEmailLogsService(customerId as string, parsedLimit);
 
   ok(res, logs, 'Email logs retrieved successfully');
 });
@@ -102,7 +102,7 @@ export const getBirthdayEmailStats = asyncHandler(async (req: Request, res: Resp
     });
   }
 
-  const stats = await JobsService.getBirthdayEmailStats(parsedDays);
+  const stats = await getBirthdayEmailStatsService(parsedDays);
 
   ok(res, stats, `Email statistics for the last ${parsedDays} days`);
 });

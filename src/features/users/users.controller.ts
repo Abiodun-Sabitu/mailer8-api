@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { UsersService } from './users.service';
+import { getUsers as getUsersService, getUserById as getUserByIdService, updateUserStatus as updateUserStatusService } from './users.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok, notFound } from '../../utils/responses';
 import { logger } from '../../config/logger';
@@ -8,7 +8,7 @@ import { GetUsersQueryDto, UpdateUserStatusDto } from './users.schemas';
 export const getUsers = asyncHandler(async (req: Request, res: Response) => {
   const query: GetUsersQueryDto = req.query as any;
 
-  const result = await UsersService.getUsers(query);
+  const result = await getUsersService(query);
 
   ok(res, result, 'Users retrieved successfully');
 });
@@ -16,7 +16,7 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const user = await UsersService.getUserById(id);
+  const user = await getUserByIdService(id);
 
   if (!user) {
     return notFound(res, 'User not found');
@@ -37,7 +37,7 @@ export const updateUserStatus = asyncHandler(async (req: Request, res: Response)
     });
   }
 
-  const user = await UsersService.updateUserStatus(id, data);
+  const user = await updateUserStatusService(id, data);
 
   logger.info(`User status updated: ${user.email}`, {
     userId: user.id,

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { SettingsService } from './settings.service';
+import { getAllSettings as getAllSettingsService, updateDefaultTemplate as updateDefaultTemplateService, updateCronTime as updateCronTimeService, updateGenericSetting as updateGenericSettingService } from './settings.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok } from '../../utils/responses';
 import { logger } from '../../config/logger';
@@ -10,7 +10,7 @@ import {
 } from './settings.schemas';
 
 export const getSettings = asyncHandler(async (req: Request, res: Response) => {
-  const settings = await SettingsService.getAllSettings();
+  const settings = await getAllSettingsService();
 
   ok(res, settings, 'Settings retrieved successfully');
 });
@@ -18,7 +18,7 @@ export const getSettings = asyncHandler(async (req: Request, res: Response) => {
 export const updateDefaultTemplate = asyncHandler(async (req: Request, res: Response) => {
   const data: UpdateDefaultTemplateDto = req.body;
 
-  const setting = await SettingsService.updateDefaultTemplate(data);
+  const setting = await updateDefaultTemplateService(data);
 
   logger.info(`Default template updated: ${data.templateId}`, {
     updatedBy: req.user?.id
@@ -30,7 +30,7 @@ export const updateDefaultTemplate = asyncHandler(async (req: Request, res: Resp
 export const updateCronTime = asyncHandler(async (req: Request, res: Response) => {
   const data: UpdateCronTimeDto = req.body;
 
-  const setting = await SettingsService.updateCronTime(data);
+  const setting = await updateCronTimeService(data);
 
   logger.info(`Cron time updated: ${data.cronTime}`, {
     updatedBy: req.user?.id
@@ -52,7 +52,7 @@ export const updateGenericSetting = asyncHandler(async (req: Request, res: Respo
     });
   }
 
-  const setting = await SettingsService.updateGenericSetting(key, data);
+  const setting = await updateGenericSettingService(key, data);
 
   logger.info(`Setting updated: ${key} = ${data.value}`, {
     updatedBy: req.user?.id

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { TemplatesService } from './templates.service';
+import { createTemplate as createTemplateService, getTemplates as getTemplatesService, getTemplateById as getTemplateByIdService, updateTemplate as updateTemplateService, deleteTemplate as deleteTemplateService } from './templates.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { created, ok, notFound, noContent } from '../../utils/responses';
 import { logger } from '../../config/logger';
@@ -9,7 +9,7 @@ export const createTemplate = asyncHandler(async (req: Request, res: Response) =
     const data: CreateTemplateDto = req.body;
     const createdBy = req.user?.id!;
 
-    const template = await TemplatesService.createTemplate(data, createdBy);
+    const template = await createTemplateService(data, createdBy);
 
     logger.info(`Template created: ${template.name}`, {
       templateId: template.id,
@@ -22,7 +22,7 @@ export const createTemplate = asyncHandler(async (req: Request, res: Response) =
 export const getTemplates = asyncHandler(async (req: Request, res: Response) => {
   const query: GetTemplatesQueryDto = req.query as any;
 
-  const result = await TemplatesService.getTemplates(query);
+  const result = await getTemplatesService(query);
 
   ok(res, result, 'Templates retrieved successfully');
 });
@@ -30,7 +30,7 @@ export const getTemplates = asyncHandler(async (req: Request, res: Response) => 
 export const getTemplateById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const template = await TemplatesService.getTemplateById(id);
+  const template = await getTemplateByIdService(id);
 
   if (!template) {
     return notFound(res, 'Template not found');
@@ -43,7 +43,7 @@ export const updateTemplate = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   const data: UpdateTemplateDto = req.body;
 
-  const template = await TemplatesService.updateTemplate(id, data);
+  const template = await updateTemplateService(id, data);
 
   logger.info(`Template updated: ${template.name}`, {
     templateId: template.id,
@@ -57,12 +57,12 @@ export const deleteTemplate = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
 
   // Check if template exists first
-  const existingTemplate = await TemplatesService.getTemplateById(id);
+  const existingTemplate = await getTemplateByIdService(id);
   if (!existingTemplate) {
     return notFound(res, 'Template not found');
   }
 
-  await TemplatesService.deleteTemplate(id);
+  await deleteTemplateService(id);
 
   logger.info(`Template deleted: ${existingTemplate.name}`, {
     templateId: id,

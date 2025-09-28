@@ -5,8 +5,8 @@ import app from './app';
 import { connectDatabase, disconnectDatabase } from './db/prisma';
 import { logger } from './config/logger';
 import cron from 'node-cron';
-import { JobsService } from './features/jobs/jobs.service';
-import { SettingsService } from './features/settings/settings.service';
+import { sendBirthdayEmails } from './features/jobs/jobs.service';
+import { getCronTime } from './features/settings/settings.service';
 
 const PORT = parseInt(process.env.PORT || '8000', 10);
 
@@ -28,14 +28,14 @@ const startServer = async () => {
     // Setup development scheduler (only in development)
     if (process.env.NODE_ENV !== 'production' && dbConnected) {
       try {
-        const cronTime = await SettingsService.getCronTime();
+        const cronTime = await getCronTime();
         const [hours, minutes] = cronTime.split(':');
         const cronExpression = `0 ${minutes} ${hours} * * *`; // Run daily at specified time
         
         cron.schedule(cronExpression, async () => {
           logger.info('🕐 Running scheduled birthday email job');
           try {
-            const summary = await JobsService.sendBirthdayEmails();
+            const summary = await sendBirthdayEmails();
             logger.info('✅ Scheduled birthday email job completed', summary);
           } catch (error) {
             logger.error('❌ Scheduled birthday email job failed', { error });
