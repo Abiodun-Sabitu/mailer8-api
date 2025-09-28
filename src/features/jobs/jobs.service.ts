@@ -1,11 +1,12 @@
 import { Customer, EmailLog } from '@prisma/client';
 import { prisma } from '../../db/prisma';
 import { getBirthdayCustomers } from '../customers/customers.service';
-import { getDefaultTemplate } from '../settings/settings.service';
+import { getDefaultTemplate, getSetting } from '../settings/settings.service';
 import { sendMail } from '../../config/mailer';
 import { renderTemplate, createEmailContext } from '../../utils/templating';
 import { isBirthdayToday } from '../../utils/dates';
 import { logger } from '../../config/logger';
+import { parsePagination, createPaginatedResponse, PaginatedResponse } from '../../utils/pagination';
 
 export interface BirthdayEmailSummary {
   attempted: number;
@@ -42,6 +43,15 @@ export const sendBirthdayEmails = async (targetDate?: Date): Promise<BirthdayEma
       templateId: defaultTemplate.id, 
       templateName: defaultTemplate.name 
     });
+
+    // Get company name for from field
+    logger.info('🏢 Fetching company name for email sender...');
+    const companyName = await getSetting('companyName');
+    const fromEmail = companyName 
+      ? `${companyName} <${process.env.EMAIL_USER || 'no-reply@mailer8.test'}>` 
+      : process.env.MAIL_FROM || 'Mailer8 <no-reply@mailer8.test>';
+    
+    logger.info('✅ From email configured', { fromEmail });
 
     // Get customers with birthdays today
     logger.info('🎂 Fetching customers with birthdays...', {
@@ -97,7 +107,8 @@ export const sendBirthdayEmails = async (targetDate?: Date): Promise<BirthdayEma
           const emailSent = await sendMail({
             to: customer.email,
             subject: renderedSubject,
-            html: renderedBody
+            html: renderedBody,
+            from: fromEmail
           });
 
           // Create email log
@@ -172,37 +183,85 @@ export const sendBirthdayEmails = async (targetDate?: Date): Promise<BirthdayEma
   }
 };
 
-export const getEmailLogs = async (customerId?: string, limit: number = 50) => {
-  const where = customerId ? { customerId } : {};
+export const getEmailLogs = async (
+  customerName?: string,
+  page?: number,
+  limit?: number,
+  startDate?: Date,
+  endDate?: Date,
+  days?: number
+): Promise<PaginatedResponse<any>> => {
+  const pagination = parsePagination({ page, limit });
+  const where: any = {};
+  
+  // Filter by customer name if provided (partial match)
+  if (customerName) {
+    where.customer = {
+      OR: [
+        { firstName: { contains: customerName, mode: 'insensitive' } },
+        { lastName: { contains: customerName, mode: 'insensitive' } },
+        { email: { contains: customerName, mode: 'insensitive' } }
+      ]
+    };
+  }
+  
+  // Build date filter
+  if (startDate || endDate || days) {
+    where.sentAt = {};
+    
+    if (days) {
+      // Filter by last N days
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+      where.sentAt.gte = since;
+    } else {
+      // Filter by date range
+      if (startDate) {
+        where.sentAt.gte = startDate;
+      }
+      if (endDate) {
+        // Add 1 day and subtract 1ms to include the entire end date
+        const endOfDay = new Date(endDate);
+        endOfDay.setDate(endOfDay.getDate() + 1);
+        endOfDay.setMilliseconds(endOfDay.getMilliseconds() - 1);
+        where.sentAt.lte = endOfDay;
+      }
+    }
+  }
 
-  const logs = await prisma.emailLog.findMany({
-    where,
-    select: {
-      id: true,
-      toEmail: true,
-      subject: true,
-      status: true,
-      sentAt: true,
-      errorMessage: true,
-      customer: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true
+  // Get logs with pagination and total count
+  const [logs, total] = await Promise.all([
+    prisma.emailLog.findMany({
+      where,
+      select: {
+        id: true,
+        toEmail: true,
+        subject: true,
+        status: true,
+        sentAt: true,
+        errorMessage: true,
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        template: {
+          select: {
+            id: true,
+            name: true
+          }
         }
       },
-      template: {
-        select: {
-          id: true,
-          name: true
-        }
-      }
-    },
-    orderBy: { sentAt: 'desc' },
-    take: limit
-  });
+      orderBy: { sentAt: 'desc' },
+      skip: pagination.skip,
+      take: pagination.take
+    }),
+    prisma.emailLog.count({ where })
+  ]);
 
-  return logs;
+  return createPaginatedResponse(logs, total, pagination);
 };
 
 // Get birthday email statistics

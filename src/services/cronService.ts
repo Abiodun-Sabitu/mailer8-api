@@ -10,6 +10,13 @@ import { logger } from '../config/logger';
 export const startDevelopmentCronJobs = async () => {
   try {
     const envCronTime = process.env.SEND_TIME || '07:00';
+    
+    // Validate time format
+    const timePattern = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timePattern.test(envCronTime)) {
+      throw new Error(`Invalid SEND_TIME format: ${envCronTime}. Use HH:MM format (00:00 - 23:59)`);
+    }
+    
     logger.info('🕐 Setting up development cron job...', { scheduledTime: envCronTime });
 
     const [hours, minutes] = envCronTime.split(':');

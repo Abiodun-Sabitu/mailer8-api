@@ -5,6 +5,7 @@ export interface SendMailOptions {
   to: string;
   subject: string;
   html: string;
+  from?: string;
 }
 
 // Create reusable transporter
@@ -25,10 +26,10 @@ transporter.verify((error: Error | null) => {
   }
 });
 
-export const sendMail = async ({ to, subject, html }: SendMailOptions): Promise<boolean> => {
+export const sendMail = async ({ to, subject, html, from }: SendMailOptions): Promise<boolean> => {
   try {
     const info = await transporter.sendMail({
-      from: process.env.MAIL_FROM || 'Mailer8 <no-reply@mailer8.test>',
+      from: from || process.env.MAIL_FROM || 'Mailer8 <no-reply@mailer8.test>',
       to,
       subject,
       html

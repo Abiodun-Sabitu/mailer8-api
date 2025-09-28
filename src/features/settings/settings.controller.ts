@@ -1,62 +1,30 @@
 import { Request, Response } from 'express';
-import { getAllSettings as getAllSettingsService, updateDefaultTemplate as updateDefaultTemplateService, updateCronTime as updateCronTimeService, updateGenericSetting as updateGenericSettingService } from './settings.service';
+import { 
+  getAllSettings as getAllSettingsService, 
+  updateSettings as updateSettingsService
+} from './settings.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok } from '../../utils/responses';
 import { logger } from '../../config/logger';
-import { 
-  UpdateDefaultTemplateDto, 
-  UpdateCronTimeDto, 
-  UpdateGenericSettingDto 
-} from './settings.schemas';
+import { UpdateSettingsDto } from './settings.schemas';
 
 export const getSettings = asyncHandler(async (req: Request, res: Response) => {
-  const settings = await getAllSettingsService();
+  const data = await getAllSettingsService();
 
-  ok(res, settings, 'Settings retrieved successfully');
+  ok(res, data, 'Settings retrieved successfully');
 });
 
-export const updateDefaultTemplate = asyncHandler(async (req: Request, res: Response) => {
-  const data: UpdateDefaultTemplateDto = req.body;
+// Unified settings update endpoint
+export const updateSettings = asyncHandler(async (req: Request, res: Response) => {
+  const data: UpdateSettingsDto = req.body;
 
-  const setting = await updateDefaultTemplateService(data);
+  const updatedSettings = await updateSettingsService(data);
 
-  logger.info(`Default template updated: ${data.templateId}`, {
-    updatedBy: req.user?.id
+  logger.info('Settings updated', {
+    updatedBy: req.user?.id,
+    settingsCount: updatedSettings.length,
+    keys: updatedSettings.map(s => s.key)
   });
 
-  ok(res, setting, 'Default template updated successfully');
-});
-
-export const updateCronTime = asyncHandler(async (req: Request, res: Response) => {
-  const data: UpdateCronTimeDto = req.body;
-
-  const setting = await updateCronTimeService(data);
-
-  logger.info(`Cron time updated: ${data.cronTime}`, {
-    updatedBy: req.user?.id
-  });
-
-  ok(res, setting, 'Cron time updated successfully');
-});
-
-export const updateGenericSetting = asyncHandler(async (req: Request, res: Response) => {
-  const { key } = req.params;
-  const data: UpdateGenericSettingDto = req.body;
-
-  // Prevent updating certain protected keys through generic endpoint
-  const protectedKeys = ['defaultTemplateId', 'cronTime'];
-  if (protectedKeys.includes(key)) {
-    return res.status(400).json({
-      success: false,
-      message: `Use specific endpoint to update ${key}`
-    });
-  }
-
-  const setting = await updateGenericSettingService(key, data);
-
-  logger.info(`Setting updated: ${key} = ${data.value}`, {
-    updatedBy: req.user?.id
-  });
-
-  ok(res, setting, 'Setting updated successfully');
+  ok(res, updatedSettings, 'Settings updated successfully');
 });

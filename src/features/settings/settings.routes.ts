@@ -1,13 +1,9 @@
 import { Router } from 'express';
-import { getSettings, updateDefaultTemplate, updateCronTime, updateGenericSetting } from './settings.controller';
+import { getSettings, updateSettings } from './settings.controller';
 import { authenticate } from '../../middleware/auth';
 import { requireSuperAdmin } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
-import {
-  UpdateDefaultTemplateSchema,
-  UpdateCronTimeSchema,
-  UpdateGenericSettingSchema
-} from './settings.schemas';
+import { UpdateSettingsSchema } from './settings.schemas';
 
 const router = Router();
 
@@ -15,28 +11,14 @@ const router = Router();
 router.use(authenticate);
 router.use(requireSuperAdmin);
 
-// Get all settings
+// Get all settings (includes available templates)
 router.get('/', getSettings);
 
-// Update default template
+// Unified settings update endpoint
 router.patch(
-  '/default-template',
-  validateBody(UpdateDefaultTemplateSchema.shape.body),
-  updateDefaultTemplate
-);
-
-// Update cron time
-router.patch(
-  '/cron-time',
-  validateBody(UpdateCronTimeSchema.shape.body),
-  updateCronTime
-);
-
-// Update generic setting
-router.patch(
-  '/:key',
-  validateBody(UpdateGenericSettingSchema.shape.body),
-  updateGenericSetting
+  '/',
+  validateBody(UpdateSettingsSchema.shape.body),
+  updateSettings
 );
 
 export default router;

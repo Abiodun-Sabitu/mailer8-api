@@ -16,14 +16,19 @@ export const sendBirthdayEmailsCron = asyncHandler(async (req: Request, res: Res
     });
   }
 
-  // Import getCronTime here to avoid circular imports
-  const { getCronTime } = await import('../settings/settings.service');
+  // Import settings functions here to avoid circular imports
+  const { getCronTime, getTimezone } = await import('../settings/settings.service');
   
-  // Check if current time is within acceptable window of DB scheduled time
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
+  // Get database configuration
   const dbScheduledTime = await getCronTime();
+  const dbTimezone = await getTimezone();
+  
+  // Get current time in the database-configured timezone
+  const now = new Date();
+  const currentTimeInDbTimezone = new Date(now.toLocaleString('en-US', { timeZone: dbTimezone }));
+  const currentHour = currentTimeInDbTimezone.getHours();
+  const currentMinute = currentTimeInDbTimezone.getMinutes();
+  
   const [scheduledHour, scheduledMinute] = dbScheduledTime.split(':').map(Number);
   
   // Calculate time difference in minutes
@@ -48,7 +53,9 @@ export const sendBirthdayEmailsCron = asyncHandler(async (req: Request, res: Res
   logger.info('External cron job triggered', {
     triggeredBy: 'external-cron',
     currentTime: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
+    currentTimezone: dbTimezone,
     dbScheduledTime,
+    dbTimezone,
     timeDifferenceMinutes,
     isWithinTimeWindow,
     targetDate: targetDate?.toISOString() || 'today',
@@ -57,12 +64,14 @@ export const sendBirthdayEmailsCron = asyncHandler(async (req: Request, res: Res
 
   // Skip if not within time window (unless force=true for testing)
   if (!force && !isWithinTimeWindow) {
-    const message = `Skipped - Current time is ${timeDifferenceMinutes} minutes away from scheduled time ${dbScheduledTime} (tolerance: ${TOLERANCE_MINUTES} minutes)`;
+    const message = `Skipped - Current time is ${timeDifferenceMinutes} minutes away from scheduled time ${dbScheduledTime} in ${dbTimezone} (tolerance: ${TOLERANCE_MINUTES} minutes)`;
     logger.info(message);
     return ok(res, { 
       skipped: true, 
       currentTime: `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`,
+      currentTimezone: dbTimezone,
       scheduledTime: dbScheduledTime,
+      scheduledTimezone: dbTimezone,
       timeDifferenceMinutes,
       toleranceMinutes: TOLERANCE_MINUTES
     }, message);
@@ -113,19 +122,69 @@ export const sendBirthdayEmails = asyncHandler(async (req: Request, res: Respons
 });
 
 export const getEmailLogs = asyncHandler(async (req: Request, res: Response) => {
-  const { customerId, limit } = req.query;
-  const parsedLimit = limit ? parseInt(limit as string) : 50;
-
-  if (limit && isNaN(parsedLimit)) {
+  const { customerName, page, limit, startDate, endDate, days } = req.query;
+  
+  // Parse and validate pagination parameters
+  const parsedPage = page ? parseInt(page as string) : undefined;
+  const parsedLimit = limit ? parseInt(limit as string) : undefined;
+  
+  if (page && isNaN(parsedPage!)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid page parameter'
+    });
+  }
+  
+  if (limit && isNaN(parsedLimit!)) {
     return res.status(400).json({
       success: false,
       message: 'Invalid limit parameter'
     });
   }
 
-  const logs = await getEmailLogsService(customerId as string, parsedLimit);
+  // Parse and validate days
+  const parsedDays = days ? parseInt(days as string) : undefined;
+  if (days && parsedDays !== undefined && isNaN(parsedDays)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid days parameter'
+    });
+  }
 
-  ok(res, logs, 'Email logs retrieved successfully');
+  // Parse and validate dates
+  let parsedStartDate: Date | undefined;
+  let parsedEndDate: Date | undefined;
+
+  if (startDate) {
+    parsedStartDate = new Date(startDate as string);
+    if (isNaN(parsedStartDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid startDate format. Use YYYY-MM-DD'
+      });
+    }
+  }
+
+  if (endDate) {
+    parsedEndDate = new Date(endDate as string);
+    if (isNaN(parsedEndDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid endDate format. Use YYYY-MM-DD'
+      });
+    }
+  }
+
+  const result = await getEmailLogsService(
+    customerName as string,
+    parsedPage,
+    parsedLimit,
+    parsedStartDate,
+    parsedEndDate,
+    parsedDays
+  );
+
+  ok(res, result, 'Email logs retrieved successfully');
 });
 
 export const getBirthdayEmailStats = asyncHandler(async (req: Request, res: Response) => {

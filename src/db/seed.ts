@@ -88,15 +88,27 @@ async function main() {
     logger.info(`ℹ️  Default template already exists: ${templateName}`);
   }
 
-  // Create/update settings
+  // Create/update settings with proper defaults
   const settings = [
     {
       key: 'defaultTemplateId',
       value: defaultTemplate.id
     },
     {
+      key: 'sendTime',
+      value: '07:00' // Default to 7:00 AM
+    },
+    {
+      key: 'timezone',
+      value: 'Africa/Lagos' // Default timezone
+    },
+    {
       key: 'cronTime',
-      value: process.env.SEND_TIME || '09:00'
+      value: '07:00' // Same as sendTime - 7:00 AM in selected timezone
+    },
+    {
+      key: 'companyName',
+      value: 'Mailer8' // Default company name
     }
   ];
 
@@ -114,7 +126,12 @@ async function main() {
   logger.info(`\n📋 Seed Summary:`);
   logger.info(`   👤 Admin User: ${adminEmail} / ${adminPassword}`);
   logger.info(`   📧 Default Template: ${templateName}`);
-  logger.info(`   ⚙️  Settings: defaultTemplateId, cronTime`);
+  logger.info(`   ⚙️  Default Settings:`);
+  logger.info(`      • Send Time: 07:00 (7:00 AM)`);
+  logger.info(`      • Timezone: Africa/Lagos`);
+  logger.info(`      • Cron Time: 07:00 (same as send time)`);
+  logger.info(`      • Company: Mailer8`);
+  logger.info(`      • Template: ${defaultTemplate.id}`);
 }
 
 main()
