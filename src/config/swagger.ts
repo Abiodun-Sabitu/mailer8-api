@@ -8,7 +8,17 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: 'Mailer8 API',
       version: '1.0.0',
-      description: 'Automated Birthday Email System API - A comprehensive REST API for managing customer birthday emails, templates, and automated scheduling.',
+      description: `
+**Automated Birthday Email System API** - REST API for managing customer birthday emails and templates.
+
+🔐 **Quick Test Credentials:**  
+
+• Super Admin: \`super_admin@mail.local\` / \`Admin@123\` (Full Access)
+
+• Admin: \`admin@mail.local\` / \`Admin@123\` (Limited Access)  
+
+
+      `,
       contact: {
         name: 'API Support',
         email: 'Abiodun.Sabitu@outlook.com'
@@ -383,18 +393,95 @@ export const setupSwagger = (app: Express): void => {
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs, {
     explorer: true,
     swaggerOptions: {
-      docExpansion: 'none',
+      docExpansion: 'list',  // Changed from 'none' to 'list' to show all operations
+      defaultModelsExpandDepth: 2,  // Expand model schemas by default
+      defaultModelExpandDepth: 2,   // Show model details
       filter: true,
       showRequestHeaders: true,
       showCommonExtensions: true,
-      tryItOutEnabled: true
+      tryItOutEnabled: true,
+      persistAuthorization: true,   // Remember authorization between page refreshes
+      displayRequestDuration: true  // Show how long requests take
     },
     customCss: `
       .swagger-ui .topbar { display: none }
       .swagger-ui .info { margin: 20px 0; }
       .swagger-ui .info .title { color: #3b4151; }
+      .detailed-guide { 
+        background: #f7f7f7; 
+        padding: 20px; 
+        margin: 20px 0; 
+        border-radius: 8px;
+        border-left: 4px solid #4a90e2;
+      }
+      .back-to-top { 
+        position: fixed; 
+        bottom: 20px; 
+        right: 20px; 
+        background: #4a90e2; 
+        color: white; 
+        padding: 10px 15px; 
+        border-radius: 5px; 
+        text-decoration: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1000;
+      }
     `,
-    customSiteTitle: 'Mailer8 API Documentation'
+    customSiteTitle: 'Mailer8 API Documentation',
+    customJs: `
+      // Add detailed guide at the bottom
+      window.onload = function() {
+        const detailedGuide = document.createElement('div');
+        detailedGuide.id = 'detailed-guide';
+        detailedGuide.className = 'detailed-guide';
+        detailedGuide.innerHTML = \`
+          <h2 id="detailed-guide">🔐 Test Credentials & Quick Start Guide</h2>
+          
+          <h3>Super Admin (Full Access)</h3>
+          <p><strong>Email:</strong> <code>super_admin@mail.local</code><br>
+          <strong>Password:</strong> <code>Admin@123</code><br>
+          <strong>Permissions:</strong> All endpoints including user management, settings, and templates</p>
+          
+          <h3>Admin (Limited Access)</h3>  
+          <p><strong>Email:</strong> <code>admin@mail.local</code><br>
+          <strong>Password:</strong> <code>Admin@123</code><br>
+          <strong>Permissions:</strong> Customer management and email logs only</p>
+          
+          <h3>🚀 Quick Start</h3>
+          <ol>
+            <li>Use the <strong>POST /api/auth/login</strong> endpoint with credentials above</li>
+            <li>Copy the <code>accessToken</code> from the response</li>
+            <li>Click <strong>Authorize</strong> button (🔒 icon) and paste: <code>Bearer &lt;your-token&gt;</code></li>
+            <li>Now you can test all authorized endpoints!</li>
+          </ol>
+          
+          <h3>📧 Email Template Placeholders</h3>
+          <ul>
+            <li><code>{{firstName}}</code> - Customer's first name</li>
+            <li><code>{{lastName}}</code> - Customer's last name</li>
+            <li><code>{{email}}</code> - Customer's email</li>
+            <li><code>{{dob}}</code> - Birthday in "DD MMM" format</li>
+          </ul>
+        \`;
+        
+        // Add it after the main content
+        const wrapper = document.querySelector('.swagger-ui .wrapper');
+        if (wrapper) {
+          wrapper.appendChild(detailedGuide);
+        }
+        
+        // Add back to top button
+        const backToTop = document.createElement('a');
+        backToTop.href = '#top';
+        backToTop.className = 'back-to-top';
+        backToTop.innerHTML = '🔝 Back to Top';
+        backToTop.onclick = function() {
+          window.scrollTo({top: 0, behavior: 'smooth'});
+          return false;
+        };
+        document.body.appendChild(backToTop);
+      };
+    `
   }));
   
   console.log('📚 Swagger documentation available at /api/docs');
