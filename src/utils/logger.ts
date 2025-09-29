@@ -4,9 +4,15 @@ import winston from 'winston';
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: 'HH:mm:ss' }),
     winston.format.errors({ stack: true }),
-    winston.format.json()
+    winston.format.colorize(),
+    winston.format.printf(({ timestamp, level, message, error }) => {
+      if (error && typeof error === 'object' && 'message' in error) {
+        return `${timestamp} ${level}: ${message} - ${(error as Error).message}`;
+      }
+      return `${timestamp} ${level}: ${message}`;
+    })
   ),
   transports: [
     new winston.transports.Console()
