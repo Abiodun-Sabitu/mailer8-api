@@ -156,7 +156,7 @@ export const getDefaultTemplate = async (): Promise<{ id: string; name: string; 
 
 export const getCronTime = async (): Promise<string> => {
   const cronTime = await getSetting('cronTime');
-  return cronTime || '07:00'; // Default fallback to match .env SEND_TIME
+  return cronTime || '07:00'; // Default fallback to match .env FixedCronTime
 };
 
 export const getTimezone = async (): Promise<string> => {
