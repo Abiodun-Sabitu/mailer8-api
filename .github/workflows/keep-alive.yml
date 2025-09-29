@@ -2,8 +2,8 @@ name: Keep Render Service Alive
 
 on:
   schedule:
-    # Runs every 5 minutes to prevent Render free tier from sleeping
-    - cron: '*/5 * * * *'
+    # Runs every 10 minutes to prevent Render free tier from sleeping (15 min timeout)
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Allows manual triggering
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Ping Render Service
         env:
-          HEALTH_CHECK_URL: ${{ vars.HEALTH_CHECK_URL || 'https://mailer8-api.onrender.com/api/health' }}
+          HEALTH_CHECK_URL: ${{ 'https://mailer8-api-1-63x9.onrender.com/api/health' }}
         run: |
           echo "Pinging service to keep it alive..."
           curl -f "$HEALTH_CHECK_URL" || echo "Service might be starting up..."
