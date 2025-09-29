@@ -29,13 +29,10 @@ const options: swaggerJsdoc.Options = {
       }
     },
     servers: [
+      
       {
-        url: process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 8000}/api`,
-        description: 'Development server'
-      },
-      {
-        url: process.env.PRODUCTION_API_URL || 'https://your-app.render.com/api',
-        description: 'Production server'
+        url: process.env.NODE_ENV === 'production' ? process.env.PRODUCTION_API_URL : `http://localhost:${process.env.PORT || 8000}`,
+        description: 'Mailer8 server'
       }
     ],
     components: {
