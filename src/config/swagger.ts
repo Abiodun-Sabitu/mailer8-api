@@ -32,7 +32,7 @@ const options: swaggerJsdoc.Options = {
       
       {
         url: process.env.NODE_ENV === 'production' ? process.env.PRODUCTION_API_URL : `http://localhost:${process.env.PORT || 8000}`,
-        description: 'Mailer8 server'
+        description:  process.env.NODE_ENV === 'production' ? 'Mailer8 live server' : 'Mailer8 dev server'
       }
     ],
     components: {
