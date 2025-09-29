@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "nodemon",
     "dev:verbose": "nodemon --verbose",
-    "build": "rimraf dist && tsc -p tsconfig.json",
-    "postinstall": "npm run build",
-    "prestart": "npm run build",
+    "build": "npx prisma generate && tsc",
     "start": "node dist/server.js",
     "clean": "rimraf dist || rm -rf dist",
     "prisma:migrate": "prisma migrate dev",
@@ -24,8 +22,23 @@
   ],
   "author": "Abiodun Sabitu",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/http-errors": "^2.0.4",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.5.4",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.15",
+    "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
@@ -47,17 +60,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cookie-parser": "^1.4.7",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/http-errors": "^2.0.4",
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^22.5.4",
-    "@types/node-cron": "^3.0.11",
-    "@types/nodemailer": "^6.4.15",
-    "@types/swagger-jsdoc": "^6.0.4",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2"
   }
