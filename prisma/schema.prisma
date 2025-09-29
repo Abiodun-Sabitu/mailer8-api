@@ -1,0 +1,99 @@
+// This is your Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// enums
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+// core users
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  firstName  String
+  lastName   String
+  role       Role     @default(ADMIN)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  createdCustomers Customer[] @relation("CustomerCreatedBy")
+  createdTemplates EmailTemplate[] @relation("TemplateCreatedBy")
+
+  @@map("users")
+}
+
+// customers
+model Customer {
+  id         String   @id @default(uuid())
+  firstName  String
+  lastName   String
+  email      String   @unique
+  dob        DateTime // store with year, compare MM-DD for birthdays
+  isActive   Boolean  @default(true)
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  creator User @relation("CustomerCreatedBy", fields: [createdBy], references: [id])
+  emailLogs EmailLog[]
+
+  @@map("customers")
+}
+
+// email templates
+model EmailTemplate {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  subject    String
+  body       String   // supports placeholders: {{firstName}}, {{lastName}}, {{email}}, {{dob}}
+  isActive   Boolean  @default(true)
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  creator User @relation("TemplateCreatedBy", fields: [createdBy], references: [id])
+  emailLogs EmailLog[]
+
+  @@map("email_templates")
+}
+
+// key-value settings (global)
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("settings")
+}
+
+// email send history
+model EmailLog {
+  id            String        @id @default(uuid())
+  customerId    String
+  templateId    String?
+  toEmail       String
+  subject       String
+  renderedBody  String
+  status        String        // "SENT" | "FAILED"
+  errorMessage  String?
+  sentAt        DateTime      @default(now())
+
+  customer  Customer   @relation(fields: [customerId], references: [id])
+  template  EmailTemplate? @relation(fields: [templateId], references: [id])
+
+  @@map("email_logs")
+}
