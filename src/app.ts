@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import { morganStream } from './config/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
+import { setupSwagger } from './config/swagger';
+import './docs'; // Load all Swagger documentation
 
 // Import route modules
 import authRoutes from './features/auth/auth.routes';
@@ -20,11 +22,14 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:8000/api/doc',
   credentials: true
 }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', { stream: morganStream }));
 app.use(cookieParser());
+
+// Setup Swagger documentation
+setupSwagger(app);
 
 // Base API routes
 app.get('/api', (req, res) => {
